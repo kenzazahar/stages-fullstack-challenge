@@ -8,15 +8,22 @@ function ArticleCard({ article, onDelete }) {
     if (!dateString) return 'N/A';
     
     const date = new Date(dateString);
-    
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
+
+    const formattedDate = date.toLocaleDateString('fr-FR', {
       day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Europe/Paris',
+    });
+
+    const formattedTime = date.toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Los_Angeles'
+      hour12: false,
+      timeZone: 'Europe/Paris',
     });
+
+    return `${formattedDate} à ${formattedTime}`;
   };
 
   return (

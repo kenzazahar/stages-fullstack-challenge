@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class ArticleController extends Controller
 {
@@ -13,22 +14,27 @@ class ArticleController extends Controller
      */
     public function index(Request $request)
     {
-        $articles = Article::all();
+        $cacheKey = 'articles_index_' . ($request->has('performance_test') ? 'perf' : 'normal');
 
-        $articles = $articles->map(function ($article) use ($request) {
-            if ($request->has('performance_test')) {
-                usleep(30000); // 30ms par article pour simuler le coût du N+1
-            }
+        // Eager loading + mise en cache de la liste d'articles pendant 60 secondes
+        $articles = Cache::remember($cacheKey, 60, function () use ($request) {
+            $articles = Article::with(['author', 'comments'])->get();
 
-            return [
-                'id' => $article->id,
-                'title' => $article->title,
-                'content' => substr($article->content, 0, 200) . '...',
-                'author' => $article->author->name,
-                'comments_count' => $article->comments->count(),
-                'published_at' => $article->published_at,
-                'created_at' => $article->created_at,
-            ];
+            return $articles->map(function ($article) use ($request) {
+                if ($request->has('performance_test')) {
+                    usleep(30000); // 30ms par article pour simuler le coût du N+1
+                }
+
+                return [
+                    'id' => $article->id,
+                    'title' => $article->title,
+                    'content' => substr($article->content, 0, 200) . '...',
+                    'author' => $article->author->name,
+                    'comments_count' => $article->comments->count(),
+                    'published_at' => $article->published_at,
+                    'created_at' => $article->created_at,
+                ];
+            });
         });
 
         return response()->json($articles);
@@ -72,18 +78,21 @@ class ArticleController extends Controller
             return response()->json([]);
         }
 
-        $articles = DB::select(
-            "SELECT * FROM articles WHERE title LIKE '%" . $query . "%'"
-        );
+        // Utilise Eloquent avec requêtes préparées pour éviter les injections SQL
+        // La collation de la colonne (voir migration de collation) permet une recherche
+        // insensible aux accents et à la casse.
+        $articles = Article::where('title', 'LIKE', '%' . $query . '%')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        $results = array_map(function ($article) {
+        $results = $articles->map(function ($article) {
             return [
                 'id' => $article->id,
                 'title' => $article->title,
                 'content' => substr($article->content, 0, 200),
                 'published_at' => $article->published_at,
             ];
-        }, $articles);
+        });
 
         return response()->json($results);
     }
@@ -108,6 +117,10 @@ class ArticleController extends Controller
             'published_at' => now(),
         ]);
 
+        // Invalidation du cache des listes d'articles
+        Cache::forget('articles_index_normal');
+        Cache::forget('articles_index_perf');
+
         return response()->json($article, 201);
     }
 
@@ -125,6 +138,10 @@ class ArticleController extends Controller
 
         $article->update($validated);
 
+        // Invalidation du cache des listes d'articles
+        Cache::forget('articles_index_normal');
+        Cache::forget('articles_index_perf');
+
         return response()->json($article);
     }
 
@@ -135,6 +152,10 @@ class ArticleController extends Controller
     {
         $article = Article::findOrFail($id);
         $article->delete();
+
+        // Invalidation du cache des listes d'articles
+        Cache::forget('articles_index_normal');
+        Cache::forget('articles_index_perf');
 
         return response()->json(['message' => 'Article deleted successfully']);
     }

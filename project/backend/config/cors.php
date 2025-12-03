@@ -19,7 +19,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // Autorise uniquement les domaines de confiance (dev + prod)
+    'allowed_origins' => [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        env('FRONTEND_URL', 'https://example.com'),
+    ],
 
     'allowed_origins_patterns' => [],
 
