@@ -8,15 +8,21 @@ function ArticleCard({ article, onDelete }) {
     if (!dateString) return 'N/A';
     
     const date = new Date(dateString);
-    
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Los_Angeles'
-    });
+    // Formatage de la date (jour, mois, année) en français avec timezone Paris
+    const dateFormatted = date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Europe/Paris'
+  });
+  // Formatage de l'heure (HH:MM) en français avec timezone Paris
+  const timeFormatted = date.toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Paris'
+  });
+  // Retourne la date au format "25/12/2024 à 15:45"
+  return `${dateFormatted} à ${timeFormatted}`;
   };
 
   return (
