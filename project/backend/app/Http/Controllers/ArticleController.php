@@ -72,18 +72,19 @@ class ArticleController extends Controller
             return response()->json([]);
         }
 
-        $articles = DB::select(
-            "SELECT * FROM articles WHERE title LIKE '%" . $query . "%'"
-        );
+        //  CORRECTION : Utiliser Query Builder avec paramètres liés (protection SQL injection)
+    $articles = Article::where('title', 'LIKE', "%{$query}%")
+        ->orWhere('content', 'LIKE', "%{$query}%")
+        ->get(['id', 'title', 'content', 'published_at']);
 
-        $results = array_map(function ($article) {
+        $results = $articles->map(function ($article) {
             return [
                 'id' => $article->id,
                 'title' => $article->title,
                 'content' => substr($article->content, 0, 200),
                 'published_at' => $article->published_at,
             ];
-        }, $articles);
+        })->values();
 
         return response()->json($results);
     }
