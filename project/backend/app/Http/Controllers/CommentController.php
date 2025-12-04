@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Comment;
 use App\Models\Article;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class CommentController extends Controller
 {
@@ -31,6 +32,8 @@ class CommentController extends Controller
             'user_id' => 'required|exists:users,id',
             'content' => 'required|string',
         ]);
+// CORRECTION : Échapper le HTML pour prévenir XSS
+        $validated['content'] = htmlspecialchars($validated['content'], ENT_QUOTES, 'UTF-8');
 
         $comment = Comment::create($validated);
         $comment->load('user');
