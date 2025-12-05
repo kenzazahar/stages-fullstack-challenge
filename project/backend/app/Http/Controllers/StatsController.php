@@ -6,6 +6,7 @@ use App\Models\Article;
 use App\Models\Comment;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class StatsController extends Controller
 {
@@ -13,7 +14,9 @@ class StatsController extends Controller
      * Get blog statistics.
      */
     public function index()
-    {
+{
+    //  CORRECTION : Cache de 5 minutes (300 secondes)
+    return Cache::remember('stats', 300, function () {
         $totalArticles = Article::count();
         $totalComments = Comment::count();
         $totalUsers = User::count();
@@ -51,6 +54,7 @@ class StatsController extends Controller
                 ];
             }),
         ]);
-    }
+    });
+}
 }
 

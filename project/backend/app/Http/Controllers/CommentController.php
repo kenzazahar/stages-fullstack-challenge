@@ -6,6 +6,7 @@ use App\Models\Comment;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Cache;
 
 class CommentController extends Controller
 {
@@ -23,43 +24,52 @@ class CommentController extends Controller
     }
 
     /**
-     * Store a new comment.
-     */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'article_id' => 'required|exists:articles,id',
-            'user_id' => 'required|exists:users,id',
-            'content' => 'required|string',
-        ]);
-// CORRECTION : Échapper le HTML pour prévenir XSS
-        $validated['content'] = htmlspecialchars($validated['content'], ENT_QUOTES, 'UTF-8');
+ * Store a new comment.
+ */
+public function store(Request $request)
+{
+    $validated = $request->validate([
+        'article_id' => 'required|exists:articles,id',
+        'user_id' => 'required|exists:users,id',
+        'content' => 'required|string',
+    ]);
 
-        $comment = Comment::create($validated);
-        $comment->load('user');
+    //  CORRECTION XSS : Échapper le HTML
+    $validated['content'] = htmlspecialchars($validated['content'], ENT_QUOTES, 'UTF-8');
 
-        return response()->json($comment, 201);
-    }
+    $comment = Comment::create($validated);
+    $comment->load('user');
 
-    /**
-     * Remove the specified comment.
-     */
-    public function destroy($id)
-    {
-        $comment = Comment::findOrFail($id);
-        $articleId = $comment->article_id;
+    //  INVALIDATION : Supprimer le cache
+    Cache::forget('articles_list');
+    Cache::forget('stats');
 
-        $comment->delete();
+    return response()->json($comment, 201);
+}
 
-        $remainingComments = Comment::where('article_id', $articleId)->get();
-        $firstComment = $remainingComments->first(); // null si aucun commentaire restant
+/**
+ * Remove the specified comment.
+ */
+public function destroy($id)
+{
+    $comment = Comment::findOrFail($id);
+    $articleId = $comment->article_id;
 
-        return response()->json([
-            'message' => 'Comment deleted successfully',
-            'remaining_count' => $remainingComments->count(),
-            'first_remaining' => $firstComment,
-        ]);
-    }
+    $comment->delete();
+
+    //  INVALIDATION : Supprimer le cache
+    Cache::forget('articles_list');
+    Cache::forget('stats');
+
+    $remainingComments = Comment::where('article_id', $articleId)->get();
+    $firstComment = $remainingComments->first();
+
+    return response()->json([
+        'message' => 'Comment deleted successfully',
+        'remaining_count' => $remainingComments->count(),
+        'first_remaining' => $firstComment,
+    ]);
+}
 
     /**
      * Update a comment.
