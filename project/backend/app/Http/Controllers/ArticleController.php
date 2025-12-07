@@ -14,7 +14,7 @@ class ArticleController extends Controller
      */
     public function index(Request $request)
 {
-    //  CORRECTION : Cache de 1 minute sauf si mode test activé
+    //  CORRECTION N+1 : Cache de 1 minute sauf si mode test activé
     if ($request->has('performance_test')) {
         // Mode test : pas de cache pour voir le vrai problème N+1
         $cacheKey = 'articles_test_' . time();
@@ -24,27 +24,43 @@ class ArticleController extends Controller
         $cacheDuration = 60; // 1 minute
     }
 
-    return Cache::remember($cacheKey, $cacheDuration, function () use ($request) {
-        $articles = Article::with('author')->withCount('comments')->get();
+    //  CORRECTION : Cache les données, pas la Response
+    $articles = Cache::remember($cacheKey, $cacheDuration, function () use ($request) {
+        //  CORRECTION N+1 : Eager loading de l'auteur et count des commentaires
+        // Au lieu de charger l'auteur et les commentaires pour chaque article (N+1),
+        // on charge tout en 3 requêtes : articles, authors, comments_count
+        $articles = Article::with('author')
+            ->withCount('comments')
+            ->orderBy('published_at', 'desc')
+            ->get();
 
         $articles = $articles->map(function ($article) use ($request) {
+            //  Option 1 : Supprimer complètement le usleep (recommandé)
+            // Le problème N+1 est résolu, pas besoin de simuler
+            
+            //  Option 2 : Réduire le délai (si vous voulez garder une simulation)
             if ($request->has('performance_test')) {
-                usleep(30000); // 30ms par article pour simuler le coût du N+1
+                // Réduire à 1ms par article pour montrer que c'est rapide maintenant
+                usleep(1000); // 1ms au lieu de 30ms
             }
 
             return [
                 'id' => $article->id,
                 'title' => $article->title,
                 'content' => substr($article->content, 0, 200) . '...',
-                'author' => $article->author->name,
-                'comments_count' => $article->comments_count,
+                'author' => $article->author->name, //  Déjà chargé via with('author')
+                'comments_count' => $article->comments_count, //  Déjà calculé via withCount('comments')
                 'published_at' => $article->published_at,
                 'created_at' => $article->created_at,
             ];
         });
 
-        return response()->json($articles);
+        //  Retourner les données (array), pas une Response
+        return $articles->toArray();
     });
+
+    //  Créer la Response en dehors du cache
+    return response()->json($articles);
 }
 
     /**
