@@ -96,6 +96,39 @@ function ImageUpload() {
           <strong>Détails :</strong>
           <div>Path: {uploadedImage.path}</div>
           <div>Size: {(uploadedImage.size / 1024).toFixed(2)} KB</div>
+          {/*  AJOUT : Affichage des statistiques d'optimisation */}
+          {uploadedImage.original_size && (
+            <div style={{ 
+              marginTop: '0.5rem', 
+              color: '#27ae60',
+              fontWeight: 'bold'
+            }}>
+              📊 Optimisation : {(uploadedImage.original_size / 1024).toFixed(0)} KB → {(uploadedImage.size / 1024).toFixed(0)} KB
+              ({((1 - uploadedImage.size / uploadedImage.original_size) * 100).toFixed(1)}% de réduction)
+            </div>
+          )}
+        </div>
+      )}
+      {/*  AJOUT : Aperçu de l'image optimisée avec lazy loading */}
+      {uploadedImage && uploadedImage.url && (
+        <div style={{ marginBottom: '1rem' }}>
+          <strong style={{ fontSize: '0.9em', color: '#7f8c8d' }}>Aperçu optimisé :</strong>
+          <img 
+            src={`http://localhost:8000${uploadedImage.url}`}
+            alt="Image uploadée"
+            loading="lazy"
+            width="600"
+            height="400"
+            style={{ 
+              width: '100%',
+              maxWidth: '600px',
+              height: 'auto',
+              borderRadius: '4px',
+              marginTop: '0.5rem',
+              border: '1px solid #ddd',
+              backgroundColor: '#f0f0f0'
+            }}
+          />
         </div>
       )}
 
@@ -127,10 +160,12 @@ function ImageUpload() {
         borderRadius: '4px',
         fontSize: '0.85em'
       }}>
-        <strong>💡 Pour tester le BUG-003 :</strong>
+        <strong>💡 Pour tester PERF-002 :</strong>
         <ol style={{ marginTop: '0.5rem', marginBottom: 0, paddingLeft: '1.5rem' }}>
-          <li>Essayez d'uploader une image &lt; 2MB → ✅ Devrait fonctionner</li>
-          <li>Essayez d'uploader une image &gt; 2MB → ❌ Devrait échouer avec erreur 413</li>
+          <li>Uploadez une image &gt; 1MB</li>
+          <li>Observez la taille finale (environ 200 KB)</li>
+          <li>Vérifiez le % de réduction affiché</li>
+          <li>L'aperçu montre l'image optimisée</li>
         </ol>
       </div>
     </div>
