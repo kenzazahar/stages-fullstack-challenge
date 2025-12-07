@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
 
 class ImageUploadController extends Controller
 {
@@ -22,16 +23,58 @@ class ImageUploadController extends Controller
         }
 
         $image = $request->file('image');
-        $filename = Str::random(20) . '.' . $image->getClientOriginalExtension();
-        $path = $image->storeAs('images', $filename, 'public');
+        $originalSize = $image->getSize();
+        $filename = Str::random(20) . '.jpg';
         
-        return response()->json([
-            'message' => 'Image uploaded successfully',
-            'path' => $path,
-            'url' => '/storage/' . $path,
-            'size' => $image->getSize(),
-        ], 201);
+        try {
+            //  Créer le dossier images s'il n'existe pas
+    $imagesPath = storage_path('app/public/images');
+    if (!file_exists($imagesPath)) {
+        mkdir($imagesPath, 0755, true);
     }
+            //  Charger l'image avec Intervention
+            $img = Image::make($image->getRealPath());
+            
+            //  Redimensionner si > 1200px de large
+            if ($img->width() > 1200) {
+                $img->resize(1200, null, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
+            }
+            
+            //  Encoder en JPEG avec qualité 80%
+            $encodedImage = $img->encode('jpg', 80);
+            
+            //  Sauvegarder dans storage/app/public/images/
+            $path = 'images/' . $filename;
+            Storage::disk('public')->put($path, $encodedImage);
+            
+            //  Récupérer la taille finale
+            $finalSize = Storage::disk('public')->size($path);
+            
+            return response()->json([
+                'message' => 'Image uploaded and optimized successfully',
+                'path' => $path,
+                'url' => '/storage/' . $path,
+                'size' => $finalSize,
+                'original_size' => $originalSize,
+            ], 201);
+            
+        } catch (\Exception $e) {
+            \Log::error('Image upload error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Image processing failed: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
+}
+
 
     /**
      * Delete an uploaded image.

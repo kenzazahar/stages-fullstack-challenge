@@ -32,7 +32,25 @@ function ArticleCard({ article, onDelete }) {
         Par {article.author} • {formatDate(article.created_at)}
       </div>
       <p style={{ marginBottom: '1rem' }}>{article.content}</p>
-      
+      {/*  AJOUT : Affichage de l'image optimisée avec lazy loading */}
+      {article.image_path && (
+        <div style={{ marginBottom: '1rem' }}>
+          <img 
+            src={`http://localhost:8000/storage/${article.image_path}`}
+            alt={article.title}
+            loading="lazy"
+            width="600"
+            height="400"
+            style={{ 
+              width: '100%', 
+              height: 'auto', 
+              borderRadius: '4px',
+              objectFit: 'cover',
+              backgroundColor: '#f0f0f0'
+            }}
+          />
+        </div>
+      )}
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
         <button 
           onClick={() => setShowComments(!showComments)}
