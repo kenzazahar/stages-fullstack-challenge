@@ -99,18 +99,19 @@ function ArticleList({ searchQuery }) {
           marginBottom: '1rem',
           fontSize: '0.9em'
         }}>
-          <strong>🐛 Test de performance (PERF-001) - MODE ACTIF</strong>
+          <strong>✅ Test de performance (PERF-001) - MODE ACTIF</strong>
           <div style={{ marginTop: '0.5rem' }}>
-            ⚠️ Un délai artificiel de 30ms par article simule le coût du problème N+1<br/>
+            ⚠️ Un délai artificiel de 30ms par article simule le coût d'une requête DB distante<br/>
+            • <strong>Problème N+1 résolu</strong> : Eager loading utilisé (2-3 requêtes SQL au lieu de 101+)<br/>
             • Ouvrez la console navigateur (F12) → onglet Network<br/>
             • Ouvrez les logs Docker : <code>docker logs blog_backend -f</code><br/>
-            • Observez le nombre de requêtes SQL (~101 requêtes pour 50 articles au lieu d'1)<br/>
-            • Avec 50 articles × 30ms = ~1,5 seconde de chargement
+            • Observez le nombre de requêtes SQL : <strong>2-3 requêtes</strong> (articles + authors + comments_count)<br/>
+            • Avec 50 articles × 30ms (simulation) = ~1,5 seconde de chargement (simulation uniquement)
           </div>
           {loadTime && (
             <div style={{ marginTop: '0.5rem', color: '#856404' }}>
               ⏱️ Temps de chargement : <strong>{loadTime}ms</strong> 
-              {parseInt(loadTime) > 1000 ? ' 🚨 TRÈS LENT!' : parseInt(loadTime) > 500 ? ' ⚠️ LENT!' : ''}
+              {parseInt(loadTime) > 1000 ? ' ⚠️ Lent (simulation 30ms/article)' : parseInt(loadTime) > 500 ? ' ⚠️ Acceptable' : ' ✅ Rapide'}
             </div>
           )}
         </div>
